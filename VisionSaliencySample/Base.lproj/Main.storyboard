@@ -17,7 +17,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="jnn-67-kVw">
-                                <rect key="frame" x="20" y="44" width="77" height="40"/>
+                                <rect key="frame" x="10" y="44" width="77" height="40"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="40" id="pGC-xQ-l5e"/>
                                 </constraints>
@@ -29,21 +29,36 @@
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="fsu-e9-O8W">
                                 <rect key="frame" x="0.0" y="84" width="414" height="778"/>
                             </imageView>
+                            <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="nbU-Mu-H8p">
+                                <rect key="frame" x="92" y="44" width="230" height="41"/>
+                                <segments>
+                                    <segment title="None"/>
+                                    <segment title="Objects"/>
+                                    <segment title="Attention"/>
+                                </segments>
+                                <connections>
+                                    <action selector="changeSaliency:" destination="BYZ-38-t0r" eventType="valueChanged" id="uSj-gp-bEh"/>
+                                </connections>
+                            </segmentedControl>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="fsu-e9-O8W" secondAttribute="trailing" id="0c1-IL-d2e"/>
+                            <constraint firstItem="nbU-Mu-H8p" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="1Bo-J3-Ou1"/>
                             <constraint firstItem="fsu-e9-O8W" firstAttribute="top" secondItem="jnn-67-kVw" secondAttribute="bottom" id="Jeq-IM-1iR"/>
-                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="jnn-67-kVw" secondAttribute="trailing" symbolic="YES" id="StB-zJ-zwh"/>
+                            <constraint firstItem="nbU-Mu-H8p" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="jnn-67-kVw" secondAttribute="trailing" constant="5" id="VkV-Ec-bGT"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="fsu-e9-O8W" secondAttribute="bottom" id="Wfk-gT-24z"/>
-                            <constraint firstItem="jnn-67-kVw" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="20" id="aqT-Up-POv"/>
+                            <constraint firstItem="fsu-e9-O8W" firstAttribute="top" secondItem="nbU-Mu-H8p" secondAttribute="bottom" id="XDl-Ah-5EU"/>
+                            <constraint firstItem="jnn-67-kVw" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="10" id="aqT-Up-POv"/>
+                            <constraint firstItem="nbU-Mu-H8p" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" id="leo-2Q-9Ev"/>
                             <constraint firstItem="fsu-e9-O8W" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="n3K-Xw-43U"/>
                             <constraint firstItem="jnn-67-kVw" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" id="tgH-cR-3sO"/>
                         </constraints>
                     </view>
                     <connections>
                         <outlet property="imageView" destination="fsu-e9-O8W" id="qUK-tl-l3I"/>
+                        <outlet property="saliencySegment" destination="nbU-Mu-H8p" id="w6T-yU-nL3"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
