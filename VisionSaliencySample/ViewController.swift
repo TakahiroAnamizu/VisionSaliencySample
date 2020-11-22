@@ -7,22 +7,35 @@ class ViewController: UIViewController {
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var saliencySegment: UISegmentedControl!
 
-    private var selectedImage: UIImage?
+    private var selectedImage: UIImage? // PHPicker から取得した画像
 
-    private let saliencyMaskLayer = CALayer()
+    private let salientAttentionLayer = CALayer()
     private let salientObjectsLayer = CAShapeLayer()
+    // 画面回転時の Saliency の座標再計算用
     private var salientObjectsPathTransform = CGAffineTransform.identity
+    private var saliencyObservation: VNSaliencyImageObservation?
+
+    // MARK: - LifeCycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        imageView.layer.addSublayer(saliencyMaskLayer)
+        setupNotification()
+
+        imageView.layer.addSublayer(salientAttentionLayer)
         salientObjectsLayer.strokeColor = #colorLiteral(red: 1, green: 0.5781051517, blue: 0, alpha: 1)
         salientObjectsLayer.fillColor = nil
 
         imageView.layer.addSublayer(salientObjectsLayer)
-        saliencyMaskLayer.opacity = 0.5
+        salientAttentionLayer.opacity = 0.5
     }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        removeNotification()
+    }
+
+    // MARK: - IBAction
 
     @IBAction func presentPHPicker(_ sender: Any) {
         var config = PHPickerConfiguration()
@@ -37,10 +50,7 @@ class ViewController: UIViewController {
     @IBAction func changeSaliency(_ sender: UISegmentedControl) {
         switch sender.selectedSegmentIndex {
         case 0:
-            resetLayer()
-            DispatchQueue.main.async {
-                self.imageView.image = self.selectedImage
-            }
+            resetSaliencyLayer()
         case 1:
             objectSaliency()
         case 2:
@@ -50,40 +60,76 @@ class ViewController: UIViewController {
         }
     }
 
-    private func resetLayer() {
-        DispatchQueue.main.async {
-            self.saliencyMaskLayer.contents = nil
-            self.salientObjectsLayer.path = nil
-            self.loadViewIfNeeded()
-        }
+    // MARK: - notification
+
+    private func setupNotification() {
+        let center = NotificationCenter.default
+        let name = UIDevice.orientationDidChangeNotification
+        center.addObserver(self,
+                           selector: #selector(orientationDidChange(_:)),
+                           name: name,
+                           object: nil)
     }
+
+    private func removeNotification() {
+        let center = NotificationCenter.default
+        let name = UIDevice.orientationDidChangeNotification
+        center.removeObserver(self, name: name, object: nil)
+    }
+
+    @objc
+    private func orientationDidChange(_ notification: NSNotification) {
+        guard let obs = saliencyObservation,
+              let img = imageView.image else {
+            saliencySegment.selectedSegmentIndex = 0
+            resetSaliencyLayer()
+            return
+        }
+        updateLayersGeometry(image: img)
+        drawSaliencyLayer(observation: obs)
+    }
+
+    // MARK: - Saliency
 
     private func objectSaliency() {
         let objectRequest = VNGenerateObjectnessBasedSaliencyImageRequest()
-        visionDetector(request: objectRequest)
+        saliencyDetector(request: objectRequest)
     }
 
     private func attentionSaliency() {
         let attentionRequest = VNGenerateAttentionBasedSaliencyImageRequest()
-        visionDetector(request: attentionRequest)
+        saliencyDetector(request: attentionRequest)
     }
 
-    private func visionDetector(request: VNImageBasedRequest) {
+    private func saliencyDetector(request: VNImageBasedRequest) {
         guard let uiImage = selectedImage,
               let input = uiImage.pixelBuffer() else { return }
         let requestHandler = VNImageRequestHandler(cvPixelBuffer: input,
                                                    options: [:])
         try? requestHandler.perform([request])
 
-        guard let observation = request.results?.first as? VNSaliencyImageObservation else { return }
+        guard let obs = request.results?.first as? VNSaliencyImageObservation else { return }
+        saliencyObservation = obs
 
-        let mask = createHeatMapMask(from: observation)
-        let path = createSalientObjectsBoundingBoxPath(from: observation,
-                                                       transform: salientObjectsPathTransform)
+        drawSaliencyLayer(observation: obs)
+    }
+
+    // MARK: - Saliency Layer
+
+    private func drawSaliencyLayer(observation obs: VNSaliencyImageObservation) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.saliencyMaskLayer.contents = mask
-            self.salientObjectsLayer.path = path
+            self.salientAttentionLayer.contents = self.createHeatMapMask(from: obs)
+            self.salientObjectsLayer.path = self.createSalientObjectsBoundingBoxPath(transform: self.salientObjectsPathTransform)
+        }
+    }
+
+    private func resetSaliencyLayer() {
+        saliencyObservation = nil
+        DispatchQueue.main.async {
+            self.salientAttentionLayer.contents = nil
+            self.salientObjectsLayer.path = nil
+            self.loadViewIfNeeded()
         }
     }
 
@@ -95,9 +141,9 @@ class ViewController: UIViewController {
         return CIContext().createCGImage(saliencyImage, from: saliencyImage.extent)
     }
 
-    private func createSalientObjectsBoundingBoxPath(from observation: VNSaliencyImageObservation, transform: CGAffineTransform) -> CGPath {
+    private func createSalientObjectsBoundingBoxPath(transform: CGAffineTransform) -> CGPath {
         let path = CGMutablePath()
-        if let salientObjects = observation.salientObjects {
+        if let salientObjects = saliencyObservation?.salientObjects {
             for object in salientObjects {
                 let bbox = object.boundingBox
                 path.addRect(bbox, transform: transform)
@@ -117,7 +163,7 @@ extension ViewController: PHPickerViewControllerDelegate {
               itemProvider.canLoadObject(ofClass: UIImage.self) else { return }
 
         saliencySegment.selectedSegmentIndex = 0
-        resetLayer()
+        resetSaliencyLayer()
 
         itemProvider.loadObject(ofClass: UIImage.self) { [weak self] image, error in
             guard let self = self,
@@ -133,7 +179,7 @@ extension ViewController: PHPickerViewControllerDelegate {
 
     private func updateLayersGeometry(image: UIImage) {
         // https://qiita.com/fr0g_fr0g/items/35339e0b9d977a404a22
-        saliencyMaskLayer.frame = AVMakeRect(aspectRatio: image.size,
+        salientAttentionLayer.frame = AVMakeRect(aspectRatio: image.size,
                                              insideRect: imageView.bounds)
         salientObjectsLayer.frame = AVMakeRect(aspectRatio: image.size,
                                                insideRect: imageView.bounds)
