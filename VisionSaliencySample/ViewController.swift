@@ -1,3 +1,5 @@
+// https://developer.apple.com/documentation/vision/highlighting_areas_of_interest_in_an_image_using_saliency
+
 import UIKit
 import PhotosUI
 import Vision
@@ -27,7 +29,7 @@ class ViewController: UIViewController {
         salientObjectsLayer.fillColor = nil
 
         imageView.layer.addSublayer(salientObjectsLayer)
-        salientAttentionLayer.opacity = 0.5
+        salientAttentionLayer.opacity = 0.75
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -93,18 +95,18 @@ class ViewController: UIViewController {
 
     private func objectSaliency() {
         let objectRequest = VNGenerateObjectnessBasedSaliencyImageRequest()
-        saliencyDetector(request: objectRequest)
+        detectSaliency(request: objectRequest)
     }
 
     private func attentionSaliency() {
         let attentionRequest = VNGenerateAttentionBasedSaliencyImageRequest()
-        saliencyDetector(request: attentionRequest)
+        detectSaliency(request: attentionRequest)
     }
 
-    private func saliencyDetector(request: VNImageBasedRequest) {
+    private func detectSaliency(request: VNImageBasedRequest) {
         guard let uiImage = selectedImage,
-              let input = uiImage.pixelBuffer() else { return }
-        let requestHandler = VNImageRequestHandler(cvPixelBuffer: input,
+              let pixelBuffer = uiImage.pixelBuffer() else { return }
+        let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer,
                                                    options: [:])
         try? requestHandler.perform([request])
 
